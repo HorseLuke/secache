@@ -3,9 +3,10 @@
  * secache
  * MTI licence
  * pure-php coded key-value database engine created by shopex.
- * @version $Id$
- *
- * http://code.google.com/p/secache/
+ * 2011-07-16：调整变量名称以节省内存；store方法增加缓存时间ttl，默认存储30天
+ * @version $Id: secache.php 7 2011-07-19 10:32:48Z horselukeCN@gmail.com $
+ * @link http://code.google.com/p/secache/
+ * 
  */
 if(!defined('SECACHE_SIZE')){
     define('SECACHE_SIZE','15M');
@@ -26,7 +27,7 @@ class secache{
     var $idx_base_pos = 444; //40+20+24*16
     var $min_size = 10240; //10M最小值
     var $schema_struct = array('size','free','lru_head','lru_tail','hits','miss');
-    var $ver = '$Rev$';
+    var $ver = '$Rev: 7 $';
     var $name = '系统默认缓存(文件型)';
 
     function workat($file){
@@ -116,11 +117,13 @@ class secache{
             }
 
             $this->_seek($info['data']);
-            $data = fread($this->_rs,$info['size']);
-            $return = unserialize($data);
+            $return = fread($this->_rs,$info['size']);
+            $return = $this->_decode_data($return);
 
             if($return===false){
-                if($locked) $this->unlock();
+                if($locked){
+                    $this->unlock();
+                }
                 return false;
             }
 
@@ -132,7 +135,9 @@ class secache{
                 return true;
             }
         }else{
-            if($locked) $this->unlock();
+            if($locked){
+                $this->unlock();
+            }
             return false;
         }
     }
@@ -182,11 +187,17 @@ class secache{
         return false;
     }
 
-    function store($key,$value){
-
+    /**
+     * 存入一个缓存
+     * @param string $key 缓存键值。和以前版本保持一致，请自行hash
+     * @param mixed $data 待缓存数据。和以前版本不同，可以存入任何类型值（但不建议存布尔值false，因为这会导致{@link secache::fetch()}的缓存判断失误）
+     * @param integer $ttl 缓存时间，单位为秒。新增参数。默认为30天（2592000秒），可以为0但不建议（因为如果很少使用该缓存一样会被lru清理掉），也就是说不要把secache当永久缓存使用
+     * @return bool
+     */
+    function store($key,$data,$ttl=2592000){
         if($this->lock(true)){
             //save data
-            $data = serialize($value);
+            $data = $this->_encode_data($data, $ttl);
             $size = strlen($data);
 
             //get list_idx
@@ -620,6 +631,37 @@ class secache{
     function trigger_error($errstr,$errno){
         trigger_error($errstr,$errno);
     }
+    
+    /**
+     * 对数据进行编码
+     * @param mixed $value
+     * @param integer $ttl 生存周期，单位为秒
+     * @return string
+     */
+    function _encode_data($value, $ttl){
+        $value = serialize($value);
+        
+        if( 0 === $ttl ){
+            $expire = 0;
+        }else{
+            $expire = time() + $ttl;
+        }
+        $expire = sprintf('%012d', $expire);
+        
+        return $expire. $value;
+    }
+    
+    /**
+     * 对数据进行解码
+     * @param string $value
+     * @return mixed
+     */
+    function _decode_data($data){
+        $expireTime = substr($data, 0, 12);
+        if(!is_numeric($expireTime)  || ($expireTime > 0 && time() - (int)$expireTime > 0)){
+            return false;
+        }
+        return unserialize(substr($data, 12));
+    }
 
 }
-?>

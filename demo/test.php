@@ -1,7 +1,12 @@
 <?php
-require('../secache.php');
-$cache = new secache;
-$cache->workat('cachedata');
+
+require(dirname(__FILE__). '/../secache.php');
+
+$cacheFileName = 'R:\cachedatadefault1';
+$insertCount = 1000;
+
+$cache = new secache();
+$cache->workat($cacheFileName);
 
 function microtime_float(){
     list($usec, $sec) = explode(" ", microtime());
@@ -10,24 +15,43 @@ function microtime_float(){
 
 $begin_time = microtime_float();
 
-for($i=0;$i<1000;$i++){
+for($i=0;$i<$insertCount;$i++){
 
     $key = md5($i); //You must *HASH* it by your self
-    $value = str_repeat('No. <strong>'.$i.'</strong> is <em style="color:red">great</em>! ',rand(1,10)); // must be a *STRING*
+    $value = 'No. '.$i.' is ok'; // must be a *STRING*
 
     $cache->store($key,$value);
 }
 
-echo '<h2>Insert x 1000 = ' .( microtime_float() - $begin_time) .' ms</h2>';
-echo '<hr /><h2>test read</h2>';
+echo '================='. PHP_EOL;
+echo 'Insert '. $insertCount. ' Count Cost: ' .( microtime_float() - $begin_time) .' ms'. PHP_EOL;
+echo '================='. PHP_EOL;
 
-for($i=0;$i<1000;$i+=200){
+echo 'Test read'. PHP_EOL;
+echo '================='. PHP_EOL;
+testRead($cache, $insertCount);
 
-    $key = md5($i); //You must *HASH* it by your self
-    if($cache->fetch($key,$value)){
-        echo '<li>'.$key.'=>'.$value.'</li>';
-    }else{
-        echo '<li>Data get failed! <b>'.$key.'</b></li>';
+echo '================='. PHP_EOL;
+echo 'Test read again'. PHP_EOL;
+echo '================='. PHP_EOL;
+
+unset($cache);
+$cache = new secache();
+$cache->workat($cacheFileName);
+testRead($cache, $insertCount);
+
+function testRead($cache, $insertCount){
+
+    for($i=0;$i<$insertCount;$i+=200){
+
+        $key = md5($i); //You must *HASH* it by your self
+	
+        if($cache->fetch($key,$value)){
+            echo $i. '[KEY='. $key.'] DATA: '.$value. PHP_EOL;
+        }else{
+            echo $i. '[KEY='. $key.'] DATA GET FAILED '. PHP_EOL;
+	    	exit();
+        }
     }
+
 }
-?>

@@ -1,37 +1,63 @@
 <?php
 /**
-  * ´ø»º´æÊ±¼ä×ÔĞĞ´¦ÀíµÄsecacheÑİÊ¾½Å±¾
+  * å¸¦ç¼“å­˜æ—¶é—´è‡ªè¡Œå¤„ç†çš„secacheæ¼”ç¤ºè„šæœ¬
   * @author Horse Luke
   * @version $Id: test_ttl.php 7 2011-07-19 10:32:48Z horselukeCN@gmail.com $
   */
 
-require('../secache.php');
-$cache = new secache;
-$cache->workat('cachedata');
+require(dirname(__FILE__). '/../secache.php');
+$cacheFileName = 'R:\cachedatattl';
 
-$key = md5('test_arr_ttl_store'); //You must *HASH* it by your self£¨»º´æ¼üÖµ¡£ºÍÒÔÇ°°æ±¾±£³ÖÒ»ÖÂ£¬Çë×ÔĞĞhash£©
-$ttl = 5; //»º´æÊ±¼ä£¬µ¥Î»ÎªÃë¡£ĞÂÔö²ÎÊı¡£Ä¬ÈÏÎª30Ìì£¨2592000Ãë£©£¬¿ÉÒÔÎª0µ«²»½¨Òé£¨ÒòÎªÈç¹ûºÜÉÙÊ¹ÓÃ¸Ã»º´æÒ»Ñù»á±»lruÇåÀíµô£©£¬Ò²¾ÍÊÇËµ²»Òª°Ñsecacheµ±ÓÀ¾Ã»º´æÊ¹ÓÃ
+$cache = new secache();
+$cache->workat($cacheFileName);
 
-$value = null;
-if($cache->fetch($key,$value)){
-	echo 'find cache:<br />';
-	print_r($value);
-}else{
-	$value = createRandArray();    //´ı»º´æÊı¾İ¡£ºÍÒÔÇ°°æ±¾²»Í¬£¬¿ÉÒÔ´æÈëÈÎºÎÀàĞÍÖµ£¨µ«²»½¨Òé´æ²¼¶ûÖµfalse£¬ÒòÎªÕâ»áµ¼ÖÂ{@link secache::fetch()}µÄ»º´æÅĞ¶ÏÊ§Îó£©
-	$cache->store($key,$value,$ttl);    //´ø»º´æÊ±¼ä×ÔĞĞ´¦ÀíµÄsecacheÊ¹ÓÃ·½·¨
-	echo 'cache not found and recreated, refresh to see';
+$key = md5('test_arr_ttl_store'); //You must *HASH* it by your selfï¼ˆç¼“å­˜é”®å€¼ã€‚å’Œä»¥å‰ç‰ˆæœ¬ä¿æŒä¸€è‡´ï¼Œè¯·è‡ªè¡Œhashï¼‰
+$ttl = 2; //ç¼“å­˜æ—¶é—´ï¼Œå•ä½ä¸ºç§’ã€‚æ–°å¢å‚æ•°ã€‚é»˜è®¤ä¸º30å¤©ï¼ˆ2592000ç§’ï¼‰ï¼Œå¯ä»¥ä¸º0ä½†ä¸å»ºè®®ï¼ˆå› ä¸ºå¦‚æœå¾ˆå°‘ä½¿ç”¨è¯¥ç¼“å­˜ä¸€æ ·ä¼šè¢«lruæ¸…ç†æ‰ï¼‰ï¼Œä¹Ÿå°±æ˜¯è¯´ä¸è¦æŠŠsecacheå½“æ°¸ä¹…ç¼“å­˜ä½¿ç”¨
+
+$value = createRandArray();    //å¾…ç¼“å­˜æ•°æ®ã€‚å’Œä»¥å‰ç‰ˆæœ¬ä¸åŒï¼Œå¯ä»¥å­˜å…¥ä»»ä½•ç±»å‹å€¼ï¼ˆä½†ä¸å»ºè®®å­˜å¸ƒå°”å€¼falseï¼Œå› ä¸ºè¿™ä¼šå¯¼è‡´{@link secache::fetch()}çš„ç¼“å­˜åˆ¤æ–­å¤±è¯¯ï¼‰
+$cache->store($key,$value,$ttl);    //å¸¦ç¼“å­˜æ—¶é—´è‡ªè¡Œå¤„ç†çš„secacheä½¿ç”¨æ–¹æ³•
+
+
+testRead($cache, $key);
+
+echo '================='. PHP_EOL;
+echo 'test read again'. PHP_EOL;
+echo '================='. PHP_EOL;
+//æ¨¡æ‹Ÿæ–­å¼€è¿æ¥é‡æ–°è¯»å–
+unset($cache);
+$cache = new secache();
+$cache->workat($cacheFileName);
+testRead($cache, $key);
+
+
+
+echo '================='. PHP_EOL;
+echo 'test read again with sleep '. ($ttl + 1).' seconds. This time cache will expire and should say "cache not found"'. PHP_EOL;
+echo '================='. PHP_EOL;
+//æ¨¡æ‹Ÿæ–­å¼€è¿æ¥é‡æ–°è¯»å–
+unset($cache);
+sleep($ttl + 1);
+$cache = new secache();
+$cache->workat($cacheFileName);
+testRead($cache, $key);
+
+echo PHP_EOL. '================='. PHP_EOL;
+
+$_status = $cache->status($curBytes,$totalBytes);
+var_export($_status);
+
+function testRead($cache, $key){
+    $value = null;
+    if($cache->fetch($key,$value)){
+	    echo 'find cache'. PHP_EOL;
+	    print_r($value);
+    }else{
+	    echo 'cache not found';
+    }
 }
 
-//status show
-echo '<hr />';
-$curBytes = $totalBytes = 0;
-$_status = $cache->status($curBytes,$totalBytes);
-echo 'totalBytes:'. ($totalBytes / 1024). ' KB ; curBytes:'. ($curBytes / 1024). ' KB';
-echo '<br />';
-print_r($_status);
 
-
-//¼æÈİphp4²¢ÇÒ½öÎªÑİÊ¾£¬¹ÊÃ»ÓĞ²ÉÈ¡¸ü°²È«µÄmt_rand
+//å…¼å®¹php4å¹¶ä¸”ä»…ä¸ºæ¼”ç¤ºï¼Œæ•…æ²¡æœ‰é‡‡å–æ›´å®‰å…¨çš„mt_rand
 function createRandArray(){
 	$return = array();
 	for($i=1;$i<=10;$i++){

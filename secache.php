@@ -5,7 +5,7 @@
  * pure-php coded key-value database engine created by shopex.
  * 2011-07-16：调整变量名称以节省内存；store方法增加缓存时间ttl，默认存储30天
  * @version $Id: secache.php 7 2011-07-19 10:32:48Z horselukeCN@gmail.com $
- * @link http://code.google.com/p/secache/
+ * @link https://github.com/shopex/secache
  * 
  */
 if(!defined('SECACHE_SIZE')){
@@ -14,6 +14,7 @@ if(!defined('SECACHE_SIZE')){
 class secache{
 
     var $idx_node_size = 40;
+	var $idx_node_base = 0;
     var $data_base_pos = 262588; //40+20+24*16+16*16*16*16*4;
     var $schema_item_size = 24;
     var $header_padding = 20; //保留空间 放置php标记防止下载
@@ -65,6 +66,7 @@ class secache{
             $this->_rs = fopen($this->_file,'rb+') or $this->trigger_error('Can\'t open the cachefile: '.realpath($this->_file),E_USER_ERROR);
             $this->_seek($this->header_padding);
             $info = unpack('V1max_size/a*ver',fread($this->_rs,$this->info_size));
+			$info['ver'] = trim($info['ver']);
             if($info['ver']!=$this->ver){
                 $this->_format(true);
             }else{
